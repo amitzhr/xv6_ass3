@@ -65,6 +65,9 @@ found:
   sp -= 4;
   *(uint*)sp = (uint)trapret;
 
+  memset(p->paged_addrs, 0, sizeof(p->paged_addrs));
+  createSwapFile(p);
+
   sp -= sizeof *p->context;
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
@@ -190,6 +193,8 @@ exit(void)
   iput(proc->cwd);
   end_op();
   proc->cwd = 0;
+
+  removeSwapFile(proc);
 
   acquire(&ptable.lock);
 

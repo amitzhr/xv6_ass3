@@ -377,6 +377,46 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
+void
+pageout(void* vaddr) {
+  uint* paddr = (uint*)walkpgdir(proc->pgdir, vaddr, 0);
+  if (paddr == 0) {
+    cprintf("Failed to find page of va %x\n!", vaddr);
+    exit();
+  }
+
+  *paddr &= (~PTE_P);
+  *paddr &= (PTE_PG);
+
+  int i;
+  for (i = 0; i < MAX_PSYC_PAGES; i++) {
+    if (proc->paged_addrs[i] == 0) 
+      break;
+  }
+  if (i == MAX_PSYC_PAGES) {
+    cprintf("Number of pages paged out exceed MAX_PSYC_PAGES!\n");
+    exit();
+  }
+
+  writeToSwapFile(proc, (char*)paddr, i, PGSIZE);
+  proc->paged_addrs[i] = vaddr;
+  lcr3(v2p(proc->pgdir)); 
+  kfree((char*)paddr);
+}
+
+void
+pagein(void* vaddr) {
+  int i;
+  for (i = 0; i < MAX_PSYC_PAGES; i++) {
+    if (proc->paged_addrs[i] == vaddr) 
+      break;
+  }
+  if (i == MAX_PSYC_PAGES) {
+    // need to call pageout and then read a page
+  }
+  // if we just need to read a page
+}
+
 //PAGEBREAK!
 // Blank page.
 //PAGEBREAK!

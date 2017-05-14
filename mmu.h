@@ -114,6 +114,8 @@ struct segdesc {
 // page table index
 #define PTX(va)         (((uint)(va) >> PTXSHIFT) & 0x3FF)
 
+#define OFFSET(va)      ((uint)(va) & 0xFFF)
+
 // construct virtual address from indexes and offset
 #define PGADDR(d, t, o) ((uint)((d) << PDXSHIFT | (t) << PTXSHIFT | (o)))
 
@@ -143,6 +145,8 @@ struct segdesc {
 // Address in page table or page directory entry
 #define PTE_ADDR(pte)   ((uint)(pte) & ~0xFFF)
 #define PTE_FLAGS(pte)  ((uint)(pte) &  0xFFF)
+
+#define PTE_PG 0x200 // Paged out to secondary storage 
 
 #ifndef __ASSEMBLER__
 typedef uint pte_t;
