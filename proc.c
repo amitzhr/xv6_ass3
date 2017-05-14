@@ -65,9 +65,6 @@ found:
   sp -= 4;
   *(uint*)sp = (uint)trapret;
 
-  memset(p->paged_addrs, 0, sizeof(p->paged_addrs));
-  createSwapFile(p);
-
   sp -= sizeof *p->context;
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
@@ -138,6 +135,23 @@ fork(void)
   if((np = allocproc()) == 0)
     return -1;
 
+  np->num_pages = 0;
+  cprintf("fork: Creating swap file for %s %d\n", np->name, np->pid);
+  createSwapFile(np);
+
+  if (strcmp(proc->name, "init") != 0 && strcmp(proc->name, "sh") != 0) {
+	  memmove(np->paged_addrs, proc->paged_addrs, sizeof(np->paged_addrs));
+	  cprintf("fork: Copying swap file from %s to %s", proc->name, np->name);
+	  int offset = 0, bytesRead = 0;
+	  char buf[PGSIZE / 2] = { 0 };
+
+	  while ((bytesRead = readFromSwapFile(proc, buf, offset, PGSIZE / 2)) != 0) {
+		  if (writeToSwapFile(np, buf, offset, bytesRead) == -1)
+			  panic("Failed to copy swap file data from parent!");
+		  offset += bytesRead;
+	  }
+  }
+
   // Copy process state from p.
   if((np->pgdir = copyuvm(proc->pgdir, proc->sz)) == 0){
     kfree(np->kstack);
@@ -160,7 +174,7 @@ fork(void)
   safestrcpy(np->name, proc->name, sizeof(proc->name));
  
   pid = np->pid;
-
+  
   // lock to force the compiler to emit the np->state write last.
   acquire(&ptable.lock);
   np->state = RUNNABLE;
@@ -189,12 +203,13 @@ exit(void)
     }
   }
 
+  if (removeSwapFile(proc) != 0)
+	  panic("exit: Error deleting swap file");
+
   begin_op();
   iput(proc->cwd);
   end_op();
   proc->cwd = 0;
-
-  removeSwapFile(proc);
 
   acquire(&ptable.lock);
 

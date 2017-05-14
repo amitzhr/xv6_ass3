@@ -74,6 +74,7 @@ struct proc {
   struct file *swapFile;			//page file
 
   void* paged_addrs[MAX_PSYC_PAGES];
+  int num_pages;
 };
 
 // Process memory is laid out contiguously, low addresses first:

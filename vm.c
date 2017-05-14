@@ -237,6 +237,7 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       return 0;
     }
     memset(mem, 0, PGSIZE);
+	proc->num_pages++;
     mappages(pgdir, (char*)a, PGSIZE, v2p(mem), PTE_W|PTE_U);
   }
   return newsz;
@@ -381,8 +382,7 @@ void
 pageout(void* vaddr) {
   uint* paddr = (uint*)walkpgdir(proc->pgdir, vaddr, 0);
   if (paddr == 0) {
-    cprintf("Failed to find page of va %x\n!", vaddr);
-    exit();
+	  panic("Failed to find page of va!");
   }
 
   *paddr &= (~PTE_P);
@@ -394,8 +394,7 @@ pageout(void* vaddr) {
       break;
   }
   if (i == MAX_PSYC_PAGES) {
-    cprintf("Number of pages paged out exceed MAX_PSYC_PAGES!\n");
-    exit();
+	  panic("Number of pages paged out exceed MAX_PSYC_PAGES!\n");
   }
 
   writeToSwapFile(proc, (char*)paddr, i, PGSIZE);

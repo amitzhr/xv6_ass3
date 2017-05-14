@@ -93,8 +93,11 @@ exec(char *path, char **argv)
   proc->tf->eip = elf.entry;  // main
   proc->tf->esp = sp;
 
-  removeSwapFile(proc);
-  createSwapFile(proc);
+  if (strcmp(proc->name, "init") != 0 && strcmp(proc->name, "sh") != 0) {
+	  cprintf("exec: Resetting swap file for %s %d\n", proc->name, proc->pid);
+	  removeSwapFile(proc);
+	  createSwapFile(proc);
+  }
   
   switchuvm(proc);
   freevm(oldpgdir);
