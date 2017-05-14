@@ -231,13 +231,21 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
   a = PGROUNDUP(oldsz);
   for(; a < newsz; a += PGSIZE){
     mem = kalloc();
+	
+	if (proc->num_pages >= MAX_PSYC_PAGES) {
+		pageoutFromLIFO();
+		proc->num_pages--;
+	}
+
+	addToLIFO(mem);
+	proc->num_pages++;
+
     if(mem == 0){
       cprintf("allocuvm out of memory\n");
       deallocuvm(pgdir, newsz, oldsz);
       return 0;
     }
     memset(mem, 0, PGSIZE);
-	proc->num_pages++;
     mappages(pgdir, (char*)a, PGSIZE, v2p(mem), PTE_W|PTE_U);
   }
   return newsz;
@@ -268,6 +276,7 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       char *v = p2v(pa);
       kfree(v);
       *pte = 0;
+	  proc->num_pages--;
     }
   }
   return newsz;
@@ -414,6 +423,17 @@ pagein(void* vaddr) {
     // need to call pageout and then read a page
   }
   // if we just need to read a page
+}
+
+void
+pageoutFromLIFO() {
+	struct page_info* info = &proc->phys_pages[MAX_PSYC_PAGES - 1];
+	pageout(info->paddr);
+	info->paddr = 0;
+}
+
+void addToLIFO(void* paddr) {
+	proc->phys_pages[proc->num_pages].paddr = paddr;
 }
 
 //PAGEBREAK!

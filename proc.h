@@ -54,6 +54,10 @@ enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 #define MAX_PSYC_PAGES 15
 #define MAX_TOTAL_PAGES 30
 
+struct page_info {
+	void* paddr;
+};
+
 // Per-process state
 struct proc {
   uint sz;                     // Size of process memory (bytes)
@@ -75,6 +79,8 @@ struct proc {
 
   void* paged_addrs[MAX_PSYC_PAGES];
   int num_pages;
+
+  struct page_info phys_pages[15];
 };
 
 // Process memory is laid out contiguously, low addresses first:
