@@ -337,6 +337,15 @@ copyuvm(pde_t *pgdir, uint sz)
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
       panic("copyuvm: pte should exist");
+    if ((*pte & PTE_PG) != 0) {
+      if(mappages(d, (void*)i, PGSIZE, 0, PTE_FLAGS(*pte)) < 0)
+        goto bad;  
+
+      pte_t* pte = walkpgdir(d, (void*)i, 0);
+      *pte &= (~PTE_P);
+
+      continue;
+    }
     if(!(*pte & PTE_P))
       panic("copyuvm: page not present");
     pa = PTE_ADDR(*pte);
@@ -428,19 +437,25 @@ void pageout(void* vaddr) {
 int
 pagein(void* vaddr) {
   int vpage = PTE_ADDR(vaddr);
-  //cprintf("Attempting to pagein %x\n", vpage);
+  cprintf("Attempting to pagein %x\n", vpage);
   pte_t* pte = walkpgdir(proc->pgdir, (char*)vpage, 0);
+
+  cprintf("1");
+
   if (pte && ((*pte & PTE_PG) != 0)) {
     int i;
+    cprintf("elisim");
     for (i = 0; i < MAX_PSYC_PAGES; i++) {
       if (proc->swapped_pages[i] == vpage)
         break;
     }
 
+    cprintf("2");
     if (i == MAX_PSYC_PAGES) 
       panic("pagein: Failed to find page\n");
 
     char *mem = kalloc();
+    cprintf("3");
 
     if(mem == 0)
       panic("pagein: out of memory\n");
