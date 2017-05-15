@@ -466,10 +466,41 @@ int popFromLIFO() {
   return p->vaddr;
 }
 
+int popFromSCFIFO() {
+  struct page_info* p = proc->head;
+  pte_t* pte = walkpgdir(proc->pgdir, (void*)p->vaddr, 0);
+  
+  if (!pte) 
+    panic("popFromSCFIFO: Pte not found!");
+
+  if ((*pte & PTE_A) == 0) {
+    proc->head = p->next;
+    if (proc->tail == p)
+      proc->tail = 0;
+    p->allocated = 0;
+    return p->vaddr;
+  } else {
+    *pte &= (~PTE_A);
+    
+    // Move to tail
+    proc->head = p->next;
+    proc->head->prev = 0;
+
+    p->prev = proc->tail;
+    p->next = 0;
+    proc->tail->next = p;
+    proc->tail = p;
+
+    return popFromSCFIFO();
+  }
+}
+
 int popPhysicalPage() {
   int vaddr = 0;
-  #ifdef  LIFO
+  #ifdef LIFO
   vaddr = popFromLIFO();
+  #elif SCFIFO
+  vaddr = popFromSCFIFO();
   #endif
 
   cprintf("%d: Popping page at %x (%d)\n", proc->pid, vaddr, proc->pages_in_mem);
