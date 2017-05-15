@@ -495,12 +495,40 @@ int popFromSCFIFO() {
   }
 }
 
+int popFromLAP() {
+  struct page_info* p = proc->head;
+  struct page_info* min = p;
+  while (p) {
+    if (p->accesses < min->accesses)
+      min = p;
+    p = p->next;
+  }
+
+  if (!min)
+    panic("popFromLAP: nothing to pop!");
+
+  if (min->prev)
+    min->prev->next = min->next;
+  if (min->next)
+    min->next->prev = min->prev;
+  if (min == proc->head)
+    proc->head = min->next;
+  if (min == proc->tail)
+    proc->tail = min->prev;
+  
+  min->allocated = 0;
+
+  return min->vaddr;
+}
+
 int popPhysicalPage() {
   int vaddr = 0;
   #ifdef LIFO
   vaddr = popFromLIFO();
   #elif SCFIFO
   vaddr = popFromSCFIFO();
+  #elif LAP
+  vaddr = popFromLAP();
   #endif
 
   cprintf("%d: Popping page at %x (%d)\n", proc->pid, vaddr, proc->pages_in_mem);
@@ -582,6 +610,25 @@ void removeSwappedPage(int vaddr) {
     panic("Failed to remove swap page");
 
   proc->swapped_pages[i] = -1;
+}
+
+void updatePhysicalMemoryAccesses(struct proc* p) {
+  struct page_info* pi;
+  pte_t* pte;
+  pi = p->head;
+  while (pi) {
+    pte = walkpgdir(p->pgdir, (void*)pi->vaddr, 0);
+    
+    if (!pte)
+      panic("updateMemoryAccessed: Failed to find pte");
+
+    if ((*pte & PTE_A) != 0) {
+      *pte &= (~PTE_A);
+      pi->accesses++;
+    }
+
+    pi = pi->next;
+  }
 }
 
 //PAGEBREAK!

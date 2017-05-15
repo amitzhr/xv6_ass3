@@ -121,6 +121,7 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+void            updateMemoryAccesses();
 
 // swtch.S
 void            swtch(struct context**, struct context*);
@@ -192,6 +193,7 @@ int             removePhysicalPage(int);
 void            removeSwappedPage(int);
 void            pageout(void*);
 int             pagein(void*);
+void            updatePhysicalMemoryAccesses(struct proc*);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

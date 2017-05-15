@@ -54,6 +54,9 @@ trap(struct trapframe *tf)
       ticks++;
       wakeup(&ticks);
       release(&tickslock);
+      #ifdef LAP
+      updateMemoryAccesses();
+      #endif
     }
     lapiceoi();
     break;

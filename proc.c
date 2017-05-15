@@ -511,3 +511,14 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+void updateMemoryAccesses() {
+  struct proc* p;
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if (p->state == RUNNABLE || p->state == RUNNING || p->state == SLEEPING) {
+      updatePhysicalMemoryAccesses(p);
+    }
+  }
+  release(&ptable.lock);
+}
