@@ -55,10 +55,11 @@ enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 #define MAX_TOTAL_PAGES 30
 
 struct page_info {
+  int allocated;
 	int vaddr;
-  // ifdef lifo
-  int ticks;
-  // endif
+  struct page_info* next;
+  struct page_info* prev;
+  int accesses;
 };
 
 // Per-process state
@@ -86,6 +87,8 @@ struct proc {
 
   int swapped_pages[MAX_PSYC_PAGES];
   struct page_info phys_pages[MAX_PSYC_PAGES];
+  struct page_info* head;
+  struct page_info* tail;
 };
 
 // Process memory is laid out contiguously, low addresses first:

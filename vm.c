@@ -229,8 +229,10 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
     return oldsz;
 
   a = PGROUNDUP(oldsz);
-  for(; a < newsz; a += PGSIZE){    
+  for(; a < newsz; a += PGSIZE){  
+    #ifndef NONE  
     pushPhysicalPage(a);
+    #endif
 
     mem = kalloc();
 
@@ -263,11 +265,14 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
     pte = walkpgdir(pgdir, (char*)a, 0);
     if(!pte)
       a += (NPTENTRIES - 1) * PGSIZE;
-    else if((*pte & PTE_P) != 0){
+    else if((*pte & PTE_P) != 0) {
+      #ifndef NONE
       if (pgdir == proc->pgdir) {
         if (removePhysicalPage(a) == 0) 
           panic("Failed to remove physical page!");
       }
+      #endif
+
       pa = PTE_ADDR(*pte);
       if(pa == 0)
         panic("kfree");
@@ -276,9 +281,11 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       kfree(v);
       *pte = 0;
     }
+    #ifndef NONE
     else if ((*pte & PTE_PG) != 0 && pgdir == proc->pgdir) {
       removeSwappedPage(a);
     }
+    #endif
   }
   return newsz;
 }
@@ -451,49 +458,19 @@ pagein(void* vaddr) {
 }
 
 int popFromLIFO() {
-  int maxIndex = 0, i;
-  for (i = 1; i < MAX_PSYC_PAGES; i++) {
-    if (proc->phys_pages[i].ticks > proc->phys_pages[maxIndex].ticks) 
-      maxIndex = i;
-  }
-
-  int vaddr = proc->phys_pages[maxIndex].vaddr;
-  proc->phys_pages[maxIndex].vaddr = proc->phys_pages[maxIndex].ticks = -1;
-  return vaddr;
-}
-
-void pushToLIFO(int vaddr) {
-  int i;
-  for (i = 0; i < MAX_PSYC_PAGES; i++) {
-    if (proc->phys_pages[i].vaddr == -1)
-      break;
-  }
-
-  if (i == MAX_PSYC_PAGES) 
-    panic("Tried to add too many to LIFO!");
-
-	proc->phys_pages[i].vaddr = vaddr;
-  proc->phys_pages[i].ticks = ticks;
-}
-
-int removeFromLIFO(int vaddr) {
-  int i;
-  for (i = 0; i < MAX_PSYC_PAGES; i++) {
-    if (proc->phys_pages[i].vaddr == vaddr)
-      break;
-  }  
-  if (i == MAX_PSYC_PAGES) {
-    return 0;
-  }
-
-  proc->phys_pages[i].vaddr = proc->phys_pages[i].ticks = -1;
-  return 1;
+  struct page_info* p = proc->tail;
+  proc->tail = p->prev;
+  if(proc->head == p)
+    proc->head = 0;
+  p->allocated = 0;
+  return p->vaddr;
 }
 
 int popPhysicalPage() {
-  //#ifdef  LIFO
-  int vaddr = popFromLIFO();
-  //#endif
+  int vaddr = 0;
+  #ifdef  LIFO
+  vaddr = popFromLIFO();
+  #endif
 
   cprintf("%d: Popping page at %x (%d)\n", proc->pid, vaddr, proc->pages_in_mem);
   proc->pages_in_mem--;
@@ -501,6 +478,7 @@ int popPhysicalPage() {
 }
 
 void pushPhysicalPage(int vaddr) {
+  vaddr = PTE_ADDR(vaddr);
   cprintf("%d: Adding page at %x (%d)\n", proc->pid, vaddr, proc->pages_in_mem);
   removePhysicalPage(vaddr);
 
@@ -509,24 +487,59 @@ void pushPhysicalPage(int vaddr) {
       pageout((void*)vaddr);
   }
 
- //#ifdef  LIFO
-  pushToLIFO(vaddr);
-  //#endif 
+  int i;
+  for (i = 0; i < MAX_PSYC_PAGES; i++)
+    if (proc->phys_pages[i].allocated == 0)
+      break;
+  if (i == MAX_PSYC_PAGES) {
+    cprintf("Array: ");
+    for (i = 0; i < MAX_PSYC_PAGES; i++) {
+      cprintf("%x %x, ", proc->phys_pages[i].vaddr, proc->phys_pages[i].allocated);
+    }
+    panic("Can't find free physical page even though pages_in_mem < MAX_PSYC_PAGES");
+  }
+
+  struct page_info* p = &proc->phys_pages[i];
+  p->allocated = 1;
+  p->vaddr = vaddr;
+  p->next = 0;
+  if (proc->tail)
+    proc->tail->next = p;
+  p->prev = proc->tail;
+  p->accesses = 0;
+  proc->tail = p;
+  if (!proc->head)
+    proc->head = p;
+
   proc->pages_in_mem++;
 }
 
 int removePhysicalPage(int vaddr) {
-  //#ifdef LIFO
-  int res = removeFromLIFO(vaddr);
-  //#endif LIFO
-  if (res) {
-    cprintf("%d: Removing page at %x (%d)\n", proc->pid, vaddr, proc->pages_in_mem);
-    proc->pages_in_mem--;
-  }
-  return res;
+  vaddr = PTE_ADDR(vaddr);
+  struct page_info* p = proc->head;
+  while (p && p->vaddr != vaddr)
+    p = p->next;
+  if (!p)
+    return 0;
+
+  cprintf("%d: Removing page at %x (%d)\n", proc->pid, vaddr, proc->pages_in_mem);
+  proc->pages_in_mem--;
+  if (p->prev)
+    p->prev->next = p->next;
+  if (p->next)
+    p->next->prev = p->prev;
+  if (p == proc->head)
+    proc->head = p->next;
+  if (p == proc->tail)
+    proc->tail = p->prev;
+  
+  p->allocated = 0;
+
+  return 1;
 }
 
 void removeSwappedPage(int vaddr) {
+  vaddr = PTE_ADDR(vaddr);
   cprintf("%d: Removing swapped page at %x (%d)\n", proc->pid, vaddr, proc->pages_swapped);
   int i;
   for (i = 0; i < MAX_PSYC_PAGES; i++) {

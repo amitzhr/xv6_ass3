@@ -70,9 +70,10 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
-  memset(p->phys_pages, -1, sizeof(p->phys_pages));
+  memset(p->phys_pages, 0, sizeof(p->phys_pages));
   memset(p->swapped_pages, -1, sizeof(p->swapped_pages));
   p->pages_in_mem = p->pages_swapped = 0;
+  p->head = p->tail = 0;
 
   return p;
 }
@@ -139,8 +140,24 @@ fork(void)
   if((np = allocproc()) == 0)
     return -1;
 
+#ifndef NONE
   cprintf("fork: Creating swap file for %s %d (%d %d)\n", np->name, np->pid, proc->pages_in_mem, np->pages_in_mem);
   memmove(np->phys_pages, proc->phys_pages, sizeof(np->phys_pages));
+
+  for (i = 0; i < MAX_PSYC_PAGES; i++) {
+    if (np->phys_pages[i].allocated) {
+      if (np->phys_pages[i].next)
+        np->phys_pages[i].next = np->phys_pages[i].next - proc->phys_pages + np->phys_pages;
+      if (np->phys_pages[i].prev)
+        np->phys_pages[i].prev = np->phys_pages[i].prev - proc->phys_pages + np->phys_pages;
+    }
+  }
+  if (proc->head)
+    np->head = proc->head - proc->phys_pages + np->phys_pages;
+  if (proc->tail)
+    np->tail = proc->tail - proc->phys_pages + np->phys_pages;
+
+
   np->pages_in_mem = proc->pages_in_mem;
 
   createSwapFile(np);
@@ -158,6 +175,7 @@ fork(void)
 		  offset += bytesRead;
 	  }
   }
+#endif
 
   // Copy process state from p.
   if((np->pgdir = copyuvm(proc->pgdir, proc->sz)) == 0){
@@ -210,8 +228,10 @@ exit(void)
     }
   }
 
+#ifndef NONE
   if (removeSwapFile(proc) != 0)
 	  panic("exit: Error deleting swap file");
+#endif
 
   begin_op();
   iput(proc->cwd);
