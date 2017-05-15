@@ -78,7 +78,7 @@ mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
   for(;;){
     if((pte = walkpgdir(pgdir, a, 1)) == 0)
       return -1;
-    if(*pte & PTE_P)
+    if(*pte & PTE_P) 
       panic("remap");
     *pte = pa | perm | PTE_P;
     if(a == last)
@@ -229,7 +229,8 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
     return oldsz;
 
   a = PGROUNDUP(oldsz);
-  for(; a < newsz; a += PGSIZE){    pushPhysicalPage(a);
+  for(; a < newsz; a += PGSIZE){    
+    pushPhysicalPage(a);
 
     mem = kalloc();
 
@@ -264,16 +265,8 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       a += (NPTENTRIES - 1) * PGSIZE;
     else if((*pte & PTE_P) != 0){
       if (pgdir == proc->pgdir) {
-        if (removePhysicalPage(a) == 0) {
-          cprintf("Failed to find VA %x\n", a);
-          cprintf("phys_pages:\n");
-          int i;
-          for (i = 0; i < 15; i++) {
-            cprintf("%x ", proc->phys_pages[i].vaddr);
-          }
-          cprintf("\n");
+        if (removePhysicalPage(a) == 0) 
           panic("Failed to remove physical page!");
-        }
       }
       pa = PTE_ADDR(*pte);
       if(pa == 0)
@@ -396,14 +389,17 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
 }
 
 void pageout(void* vaddr) {
-  pte_t* pte = walkpgdir(proc->pgdir, vaddr, 0);
+  int vpage = PTE_ADDR(vaddr);
+  pte_t* pte = walkpgdir(proc->pgdir, (void*)vpage, 0);
   if (pte == 0) {
 	  panic("Failed to find page of va!");
   }
 
-  cprintf("Setting PG For %x\n", pte);
   *pte &= (~PTE_P);
   *pte |= (PTE_PG);
+
+  if ((*pte & PTE_P) != 0)
+    panic("Flag still up!");
 
   int i;
   for (i = 0; i < MAX_PSYC_PAGES; i++) {
@@ -414,23 +410,23 @@ void pageout(void* vaddr) {
 	  panic("Number of pages paged out exceed MAX_PSYC_PAGES!\n");
   }
 
-  writeToSwapFile(proc, (char*)pte, i, PGSIZE);
-  proc->swapped_pages[i] = (int)vaddr;
+  //cprintf("%d: Paged out %x\n", proc->pid, vpage);
+  writeToSwapFile(proc, (char*)PTE_ADDR(p2v(*pte)), i*PGSIZE, PGSIZE);
+  proc->swapped_pages[i] = vpage;
   lcr3(v2p(proc->pgdir)); 
-  kfree((char*)PTE_ADDR(pte));
+  kfree((char*)PTE_ADDR(p2v(*pte)));
   proc->pages_swapped++;
 }
 
 int
 pagein(void* vaddr) {
-  cprintf("Attempting to pagein %x\n", vaddr);
-  pte_t* pte = walkpgdir(proc->pgdir, (char*)vaddr, 0);
-  cprintf("Pte found: %x\n", pte);
+  int vpage = PTE_ADDR(vaddr);
+  //cprintf("Attempting to pagein %x\n", vpage);
+  pte_t* pte = walkpgdir(proc->pgdir, (char*)vpage, 0);
   if (pte && ((*pte & PTE_PG) != 0)) {
-    cprintf("Flag up\n");
     int i;
     for (i = 0; i < MAX_PSYC_PAGES; i++) {
-      if (proc->swapped_pages[i] == (int)vaddr) 
+      if (proc->swapped_pages[i] == vpage)
         break;
     }
 
@@ -445,8 +441,8 @@ pagein(void* vaddr) {
     if (readFromSwapFile(proc, mem, i * PGSIZE, PGSIZE) == -1)
       panic("pagein: Failed to read from swap file!");
 
-    mappages(proc->pgdir, (char*)vaddr, PGSIZE, v2p(mem), PTE_W|PTE_U);
-    pushPhysicalPage((int)vaddr);
+    mappages(proc->pgdir, (char*)vpage, PGSIZE, v2p(mem), PTE_W|PTE_U);
+    pushPhysicalPage(vpage);
 
     return 1;
   }
@@ -473,15 +469,8 @@ void pushToLIFO(int vaddr) {
       break;
   }
 
-  if (i == MAX_PSYC_PAGES) {
-    cprintf("proc->pages_in_mem: %d\n", proc->pages_in_mem);
-    cprintf("phys_pages:\n");
-      for (i = 0; i < 15; i++) {
-        cprintf("%x ", proc->phys_pages[i].vaddr);
-      }
-      cprintf("\n");
+  if (i == MAX_PSYC_PAGES) 
     panic("Tried to add too many to LIFO!");
-  }
 
 	proc->phys_pages[i].vaddr = vaddr;
   proc->phys_pages[i].ticks = ticks;
@@ -538,7 +527,7 @@ int removePhysicalPage(int vaddr) {
 }
 
 void removeSwappedPage(int vaddr) {
-  cprintf("%d: Removing swapped page at %x (%d)", proc->pid, vaddr, proc->pages_swapped);
+  cprintf("%d: Removing swapped page at %x (%d)\n", proc->pid, vaddr, proc->pages_swapped);
   int i;
   for (i = 0; i < MAX_PSYC_PAGES; i++) {
     if (proc->swapped_pages[i] == vaddr) 
