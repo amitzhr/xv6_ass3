@@ -122,6 +122,9 @@ int             wait(void);
 void            wakeup(void*);
 void            yield(void);
 void            updateMemoryAccesses();
+void            printProcInfo(struct proc* p);
+int init_pages;
+int free_pages;
 
 // swtch.S
 void            swtch(struct context**, struct context*);

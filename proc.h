@@ -84,6 +84,8 @@ struct proc {
 
   int pages_in_mem;
   int pages_swapped;
+  int num_page_faults;
+  int num_page_outs;
 
   int swapped_pages[MAX_PSYC_PAGES];
   struct page_info phys_pages[MAX_PSYC_PAGES];

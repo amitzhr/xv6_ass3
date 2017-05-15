@@ -84,8 +84,10 @@ trap(struct trapframe *tf)
 
   case T_PGFLT:
     addr = rcr2();
-    if (pagein((void*)addr) != 0) 
+    if (pagein((void*)addr) != 0) {
+      proc->num_page_faults++;
       break;
+    }
    
   //PAGEBREAK: 13
   default:

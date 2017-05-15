@@ -448,6 +448,8 @@ pagein(void* vaddr) {
     if (readFromSwapFile(proc, mem, i * PGSIZE, PGSIZE) == -1)
       panic("pagein: Failed to read from swap file!");
 
+    proc->swapped_pages[i] = -1;
+
     mappages(proc->pgdir, (char*)vpage, PGSIZE, v2p(mem), PTE_W|PTE_U);
     pushPhysicalPage(vpage);
 
@@ -544,6 +546,7 @@ void pushPhysicalPage(int vaddr) {
   if (proc->pages_in_mem >= MAX_PSYC_PAGES) {
       int vaddr = popPhysicalPage();
       pageout((void*)vaddr);
+      proc->num_page_outs++;
   }
 
   int i;

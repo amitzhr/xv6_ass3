@@ -72,7 +72,7 @@ found:
 
   memset(p->phys_pages, 0, sizeof(p->phys_pages));
   memset(p->swapped_pages, -1, sizeof(p->swapped_pages));
-  p->pages_in_mem = p->pages_swapped = 0;
+  p->pages_in_mem = p->pages_swapped = p->num_page_faults = p->num_page_outs = 0;
   p->head = p->tail = 0;
 
   return p;
@@ -231,6 +231,10 @@ exit(void)
 #ifndef NONE
   if (removeSwapFile(proc) != 0)
 	  panic("exit: Error deleting swap file");
+#endif
+
+#ifdef TRUE
+  printProcInfo(proc);
 #endif
 
   begin_op();
@@ -482,34 +486,14 @@ kill(int pid)
 void
 procdump(void)
 {
-  static char *states[] = {
-  [UNUSED]    "unused",
-  [EMBRYO]    "embryo",
-  [SLEEPING]  "sleep ",
-  [RUNNABLE]  "runble",
-  [RUNNING]   "run   ",
-  [ZOMBIE]    "zombie"
-  };
-  int i;
-  struct proc *p;
-  char *state;
-  uint pc[10];
-  
+  struct proc* p;
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == UNUSED)
       continue;
-    if(p->state >= 0 && p->state < NELEM(states) && states[p->state])
-      state = states[p->state];
-    else
-      state = "???";
-    cprintf("%d %s %s", p->pid, state, p->name);
-    if(p->state == SLEEPING){
-      getcallerpcs((uint*)p->context->ebp+2, pc);
-      for(i=0; i<10 && pc[i] != 0; i++)
-        cprintf(" %p", pc[i]);
-    }
-    cprintf("\n");
+    printProcInfo(p);
   }
+
+  cprintf("%d\% free pages in the system\n", free_pages * 100 / init_pages);
 }
 
 void updateMemoryAccesses() {
@@ -521,4 +505,30 @@ void updateMemoryAccesses() {
     }
   }
   release(&ptable.lock);
+}
+
+void printProcInfo(struct proc* p) {
+  static char *states[] = {
+  [UNUSED]    "unused",
+  [EMBRYO]    "embryo",
+  [SLEEPING]  "sleep ",
+  [RUNNABLE]  "runble",
+  [RUNNING]   "run   ",
+  [ZOMBIE]    "zombie"
+  };
+  int i;
+  char *state;
+  uint pc[10];
+
+  if(p->state >= 0 && p->state < NELEM(states) && states[p->state])
+      state = states[p->state];
+  else
+      state = "???";
+  cprintf("%d %s %d %d %d %d %s", p->pid, state, p->pages_in_mem, p->pages_swapped, p->num_page_faults, p->num_page_outs, p->name);
+  if(p->state == SLEEPING){
+    getcallerpcs((uint*)p->context->ebp+2, pc);
+    for(i=0; i<10 && pc[i] != 0; i++)
+      cprintf(" %p", pc[i]);
+  }    
+  cprintf("\n");
 }

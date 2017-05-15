@@ -33,6 +33,8 @@ kinit1(void *vstart, void *vend)
   initlock(&kmem.lock, "kmem");
   kmem.use_lock = 0;
   freerange(vstart, vend);
+
+  init_pages = (PGROUNDDOWN((uint)vend) - PGROUNDUP((uint)vstart)) / PGSIZE;
 }
 
 void
@@ -40,6 +42,9 @@ kinit2(void *vstart, void *vend)
 {
   freerange(vstart, vend);
   kmem.use_lock = 1;
+
+  init_pages += (PGROUNDDOWN((uint)vend) - PGROUNDUP((uint)vstart)) / PGSIZE;
+  free_pages = init_pages;
 }
 
 void
@@ -72,6 +77,7 @@ kfree(char *v)
   r = (struct run*)v;
   r->next = kmem.freelist;
   kmem.freelist = r;
+  free_pages++;
   if(kmem.use_lock)
     release(&kmem.lock);
 }
@@ -89,6 +95,7 @@ kalloc(void)
   r = kmem.freelist;
   if(r)
     kmem.freelist = r->next;
+  free_pages--;
   if(kmem.use_lock)
     release(&kmem.lock);
   return (char*)r;
