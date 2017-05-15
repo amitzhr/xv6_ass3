@@ -70,6 +70,10 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
+  memset(p->phys_pages, -1, sizeof(p->phys_pages));
+  memset(p->swapped_pages, -1, sizeof(p->swapped_pages));
+  p->pages_in_mem = p->pages_swapped = 0;
+
   return p;
 }
 
@@ -135,12 +139,15 @@ fork(void)
   if((np = allocproc()) == 0)
     return -1;
 
-  np->num_pages = 0;
-  cprintf("fork: Creating swap file for %s %d\n", np->name, np->pid);
-  createSwapFile(np);
+  cprintf("fork: Creating swap file for %s %d (%d %d)\n", np->name, np->pid, proc->pages_in_mem, np->pages_in_mem);
+  memmove(np->phys_pages, proc->phys_pages, sizeof(np->phys_pages));
+  np->pages_in_mem = proc->pages_in_mem;
 
+  createSwapFile(np);
   if (strcmp(proc->name, "init") != 0 && strcmp(proc->name, "sh") != 0) {
-	  memmove(np->paged_addrs, proc->paged_addrs, sizeof(np->paged_addrs));
+	  memmove(np->swapped_pages, proc->swapped_pages, sizeof(np->swapped_pages));
+    np->pages_swapped = proc->pages_swapped;
+
 	  cprintf("fork: Copying swap file from %s to %s", proc->name, np->name);
 	  int offset = 0, bytesRead = 0;
 	  char buf[PGSIZE / 2] = { 0 };

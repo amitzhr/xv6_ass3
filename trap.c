@@ -36,6 +36,7 @@ idtinit(void)
 void
 trap(struct trapframe *tf)
 {
+  int addr; 
   if(tf->trapno == T_SYSCALL){
     if(proc->killed)
       exit();
@@ -77,6 +78,11 @@ trap(struct trapframe *tf)
             cpu->id, tf->cs, tf->eip);
     lapiceoi();
     break;
+
+  case T_PGFLT:
+    addr = rcr2();
+    if (pagein((void*)addr) != 0) 
+      break;
    
   //PAGEBREAK: 13
   default:

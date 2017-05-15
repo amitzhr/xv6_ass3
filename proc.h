@@ -55,7 +55,10 @@ enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 #define MAX_TOTAL_PAGES 30
 
 struct page_info {
-	void* paddr;
+	int vaddr;
+  // ifdef lifo
+  int ticks;
+  // endif
 };
 
 // Per-process state
@@ -77,10 +80,12 @@ struct proc {
   //Swap file. must initiate with create swap file
   struct file *swapFile;			//page file
 
-  void* paged_addrs[MAX_PSYC_PAGES];
-  int num_pages;
 
-  struct page_info phys_pages[15];
+  int pages_in_mem;
+  int pages_swapped;
+
+  int swapped_pages[MAX_PSYC_PAGES];
+  struct page_info phys_pages[MAX_PSYC_PAGES];
 };
 
 // Process memory is laid out contiguously, low addresses first:
