@@ -14,7 +14,6 @@ main(int argc, char *argv[]){
 	char *arr[14];
 	char input[10];
 	
-	// Fill all physical memory
 	for (i = 0; i < 12; ++i) {
 		arr[i] = sbrk(PGSIZE);
 		printf(1, "arr[%d]=0x%x\n", i, arr[i]);
@@ -52,9 +51,6 @@ main(int argc, char *argv[]){
 	else {
 		wait();
 
-		/*
-		Deallocate all the pages.
-		*/
 		sbrk(-14 * PGSIZE);
 		printf(1, "Deallocated all extra pages.\nPress any key to exit the father code.\n");
 		gets(input, 10);
@@ -67,7 +63,6 @@ main(int argc, char *argv[]){
 
 	printf(1, "Testing SCFIFO... \n");
 
-	// Fill all physical memory
 	for (i = 0; i < 12; ++i) {
 		arr[i] = sbrk(PGSIZE);
 		printf(1, "arr[%d]=0x%x\n", i, arr[i]);
@@ -120,7 +115,6 @@ main(int argc, char *argv[]){
 
 	printf(1, "Testing LAP... \n");
 
-	// Fill all physical memory
 	for (i = 0; i < 12; ++i) {
 		arr[i] = sbrk(PGSIZE);
 		printf(1, "arr[%d]=0x%x\n", i, arr[i]);

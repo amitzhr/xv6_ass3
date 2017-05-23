@@ -95,7 +95,7 @@ exec(char *path, char **argv)
 
 #ifndef NONE
   if (strcmp(proc->name, "init") != 0 && strcmp(proc->name, "sh") != 0) {
-	  cprintf("exec: Resetting swap file for %s %d\n", proc->name, proc->pid);
+	  //cprintf("exec: Resetting swap file for %s %d\n", proc->name, proc->pid);
 	  removeSwapFile(proc);
 	  createSwapFile(proc);
   }

@@ -551,7 +551,7 @@ int popPhysicalPage() {
 
 void pushPhysicalPage(int vaddr) {
   vaddr = PTE_ADDR(vaddr);
-  cprintf("%d: Adding page at %x (%d)\n", proc->pid, vaddr, proc->pages_in_mem);
+  //cprintf("%d: Adding page at %x (%d)\n", proc->pid, vaddr, proc->pages_in_mem);
   removePhysicalPage(vaddr);
 
   if (proc->pages_in_mem >= MAX_PSYC_PAGES) {
@@ -564,13 +564,8 @@ void pushPhysicalPage(int vaddr) {
   for (i = 0; i < MAX_PSYC_PAGES; i++)
     if (proc->phys_pages[i].allocated == 0)
       break;
-  if (i == MAX_PSYC_PAGES) {
-    cprintf("Array: ");
-    for (i = 0; i < MAX_PSYC_PAGES; i++) {
-      cprintf("%x %x, ", proc->phys_pages[i].vaddr, proc->phys_pages[i].allocated);
-    }
+  if (i == MAX_PSYC_PAGES) 
     panic("Can't find free physical page even though pages_in_mem < MAX_PSYC_PAGES");
-  }
 
   struct page_info* p = &proc->phys_pages[i];
   p->allocated = 1;
@@ -595,7 +590,7 @@ int removePhysicalPage(int vaddr) {
   if (!p)
     return 0;
 
-  cprintf("%d: Removing page at %x (%d)\n", proc->pid, vaddr, proc->pages_in_mem);
+  //cprintf("%d: Removing page at %x (%d)\n", proc->pid, vaddr, proc->pages_in_mem);
   proc->pages_in_mem--;
   if (p->prev)
     p->prev->next = p->next;
@@ -613,7 +608,7 @@ int removePhysicalPage(int vaddr) {
 
 void removeSwappedPage(int vaddr) {
   vaddr = PTE_ADDR(vaddr);
-  cprintf("%d: Removing swapped page at %x (%d)\n", proc->pid, vaddr, proc->pages_swapped);
+  //cprintf("%d: Removing swapped page at %x (%d)\n", proc->pid, vaddr, proc->pages_swapped);
   int i;
   for (i = 0; i < MAX_PSYC_PAGES; i++) {
     if (proc->swapped_pages[i] == vaddr) 

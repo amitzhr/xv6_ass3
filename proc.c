@@ -141,7 +141,7 @@ fork(void)
     return -1;
 
 #ifndef NONE
-  cprintf("fork: Creating swap file for %s %d (%d %d)\n", np->name, np->pid, proc->pages_in_mem, np->pages_in_mem);
+  //cprintf("fork: Creating swap file for %s %d (%d %d)\n", np->name, np->pid, proc->pages_in_mem, np->pages_in_mem);
   memmove(np->phys_pages, proc->phys_pages, sizeof(np->phys_pages));
 
   for (i = 0; i < MAX_PSYC_PAGES; i++) {
@@ -165,7 +165,7 @@ fork(void)
 	  memmove(np->swapped_pages, proc->swapped_pages, sizeof(np->swapped_pages));
     np->pages_swapped = proc->pages_swapped;
 
-	  cprintf("fork: Copying swap file from %s to %s\n", proc->name, np->name);
+	  //cprintf("fork: Copying swap file from %s to %s\n", proc->name, np->name);
 	  int offset = 0, bytesRead = 0;
 	  char buf[PGSIZE / 2] = { 0 };
 
@@ -493,7 +493,7 @@ procdump(void)
     printProcInfo(p);
   }
 
-  cprintf("%d\% free pages in the system\n", free_pages * 100 / init_pages);
+  cprintf("%d / %d free pages in the system\n", free_pages, init_pages);
 }
 
 void updateMemoryAccesses() {
