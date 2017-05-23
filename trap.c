@@ -86,6 +86,7 @@ trap(struct trapframe *tf)
     addr = rcr2();
     if (pagein((void*)addr) != 0) {
       proc->num_page_faults++;
+      cprintf("Page fault occurred\n");
       break;
     }
    

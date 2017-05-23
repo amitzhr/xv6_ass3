@@ -165,7 +165,7 @@ fork(void)
 	  memmove(np->swapped_pages, proc->swapped_pages, sizeof(np->swapped_pages));
     np->pages_swapped = proc->pages_swapped;
 
-	  cprintf("fork: Copying swap file from %s to %s", proc->name, np->name);
+	  cprintf("fork: Copying swap file from %s to %s\n", proc->name, np->name);
 	  int offset = 0, bytesRead = 0;
 	  char buf[PGSIZE / 2] = { 0 };
 

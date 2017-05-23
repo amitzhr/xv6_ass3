@@ -438,24 +438,20 @@ int
 pagein(void* vaddr) {
   int vpage = PTE_ADDR(vaddr);
   cprintf("Attempting to pagein %x\n", vpage);
-  pte_t* pte = walkpgdir(proc->pgdir, (char*)vpage, 0);
 
-  cprintf("1");
+  pte_t* pte = walkpgdir(proc->pgdir, (char*)vpage, 0);
 
   if (pte && ((*pte & PTE_PG) != 0)) {
     int i;
-    cprintf("elisim");
     for (i = 0; i < MAX_PSYC_PAGES; i++) {
       if (proc->swapped_pages[i] == vpage)
         break;
     }
 
-    cprintf("2");
     if (i == MAX_PSYC_PAGES) 
       panic("pagein: Failed to find page\n");
 
     char *mem = kalloc();
-    cprintf("3");
 
     if(mem == 0)
       panic("pagein: out of memory\n");
