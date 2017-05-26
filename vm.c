@@ -437,7 +437,7 @@ void pageout(void* vaddr) {
 int
 pagein(void* vaddr) {
   int vpage = PTE_ADDR(vaddr);
-  cprintf("Attempting to pagein %x\n", vpage);
+  cprintf("%d: Attempting to pagein %x\n", proc->pid, vpage);
 
   pte_t* pte = walkpgdir(proc->pgdir, (char*)vpage, 0);
 
@@ -544,7 +544,7 @@ int popPhysicalPage() {
   vaddr = popFromLAP();
   #endif
 
-  cprintf("%d: Popping page at %x (%d)\n", proc->pid, vaddr, proc->pages_in_mem);
+  cprintf("%d: Popping page at %x\n", proc->pid, vaddr);
   proc->pages_in_mem--;
   return vaddr;
 }
