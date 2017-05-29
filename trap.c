@@ -54,10 +54,10 @@ trap(struct trapframe *tf)
       ticks++;
       wakeup(&ticks);
       release(&tickslock);
-      #ifdef LAP
-      updateMemoryAccesses();
-      #endif
     }
+#ifdef LAP
+	updateMemoryAccesses();
+#endif
     lapiceoi();
     break;
   case T_IRQ0 + IRQ_IDE:

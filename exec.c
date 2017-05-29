@@ -35,6 +35,18 @@ exec(char *path, char **argv)
   if((pgdir = setupkvm()) == 0)
     goto bad;
 
+#ifndef NONE
+  if (strcmp(proc->name, "init") != 0 && strcmp(proc->name, "sh") != 0) {
+	  //cprintf("exec: Resetting swap file for %s %d\n", proc->name, proc->pid);
+	  removeSwapFile(proc);
+	  memset(proc->phys_pages, 0, sizeof(proc->phys_pages));
+	  memset(proc->swapped_pages, -1, sizeof(proc->swapped_pages));
+	  proc->pages_in_mem = proc->pages_swapped = proc->num_page_faults = proc->num_page_outs = 0;
+	  proc->head = proc->tail = 0;
+	  createSwapFile(proc);
+  }
+#endif
+
   // Load program into memory.
   sz = 0;
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
@@ -92,18 +104,6 @@ exec(char *path, char **argv)
   proc->sz = sz;
   proc->tf->eip = elf.entry;  // main
   proc->tf->esp = sp;
-
-#ifndef NONE
-  if (strcmp(proc->name, "init") != 0 && strcmp(proc->name, "sh") != 0) {
-	  //cprintf("exec: Resetting swap file for %s %d\n", proc->name, proc->pid);
-	  removeSwapFile(proc);
-	  memset(proc->phys_pages, 0, sizeof(proc->phys_pages));
-	  memset(proc->swapped_pages, -1, sizeof(proc->swapped_pages));
-	  proc->pages_in_mem = proc->pages_swapped = proc->num_page_faults = proc->num_page_outs = 0;
-	  proc->head = proc->tail = 0;
-	  createSwapFile(proc);
-  }
-#endif
   
   switchuvm(proc);
   freevm(oldpgdir);
